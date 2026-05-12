@@ -1,0 +1,86 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: mindmap-postgres
+    environment:
+      POSTGRES_USER: mindmap
+      POSTGRES_PASSWORD: mindmap
+      POSTGRES_DB: mindmap
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../../apps/api/src/db/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mindmap"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: mindmap-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  orchestration:
+    build:
+      context: ../../apps/orchestration
+      dockerfile: Dockerfile
+    container_name: mindmap-orchestration
+    ports:
+      - "8001:8001"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_URL=postgresql://mindmap:mindmap@postgres:5432/mindmap
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
+      - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-false}
+      - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-mind-map}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ../../apps/api
+      dockerfile: Dockerfile
+    container_name: mindmap-api
+    ports:
+      - "3001:3001"
+    environment:
+      - DATABASE_URL=postgresql://mindmap:mindmap@postgres:5432/mindmap
+      - REDIS_URL=redis://redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ORCHESTRATION_SERVICE_URL=http://orchestration:8001
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - ALLOWED_ORIGINS=http://localhost:3000
+      - PORT=3001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      orchestration:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
