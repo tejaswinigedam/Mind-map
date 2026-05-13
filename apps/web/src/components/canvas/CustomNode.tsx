@@ -1,9 +1,11 @@
 import { memo, useState } from 'react'
 import { Handle, Position, type NodeProps } from 'reactflow'
 import { motion } from 'framer-motion'
-import { MessageSquare, FileText, Brain, Search, Sparkles } from 'lucide-react'
-import { getDepthColor } from '@/stores/mindMapStore'
+import { MessageSquare, FileText, Brain, Search, Sparkles, PlusCircle } from 'lucide-react'
+import { getDepthColor, useMindMapStore } from '@/stores/mindMapStore'
 import { useUIStore } from '@/stores/uiStore'
+import { useAgentStore } from '@/stores/agentStore'
+import { getSocket } from '@/lib/socket'
 import type { MindMapNode } from '@mind-map/shared-types'
 
 type CustomNodeData = MindMapNode & { isGhost?: boolean }
@@ -20,6 +22,12 @@ export const CustomNode = memo(({ data, selected }: NodeProps) => {
   const [editLabel, setEditLabel] = useState(d.label)
   const openNodeChat = useUIStore((s) => s.openNodeChat)
 
+  const setAgentThinking = useAgentStore((s) => s.setAgentThinking)
+  const clearAgentThinking = useAgentStore((s) => s.clearAgentThinking)
+  const addProposal = useAgentStore((s) => s.addProposal)
+  const nodes = useMindMapStore((s) => s.nodes)
+  const edges = useMindMapStore((s) => s.edges)
+
   const depthColor = d.color ?? getDepthColor(d.depth ?? 0)
   const isAI = d.createdBy !== 'human'
   const isGhost = d.isGhost ?? false
@@ -32,6 +40,30 @@ export const CustomNode = memo(({ data, selected }: NodeProps) => {
   const handleLabelClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (!isGhost) setIsEditing(true)
+  }
+
+  // Duplicate hooks removed
+
+  const handleExpand = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (isGhost) return
+
+    const socket = getSocket()
+    if (!socket.connected) {
+      console.warn('Socket not connected, expansion may fail')
+    }
+
+    setAgentThinking({ agent: 'BrainstormAgent', message: `Expanding "${d.label}"...` })
+    
+    socket.emit('agent:request', {
+      intent: 'dive_deeper',
+      nodeId: d.id,
+      nodeLabel: d.label,
+      text: '', 
+      graphSnapshot: { nodes, edges },
+    } as any)
+    
+    // UI feedback handled by socket events
   }
 
   return (
@@ -113,6 +145,16 @@ export const CustomNode = memo(({ data, selected }: NodeProps) => {
           </p>
         )}
       </div>
+
+      {/* Expand Button */}
+      {!isGhost && (
+        <button
+          onClick={handleExpand}
+          className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-card border border-border shadow-sm flex items-center justify-center text-muted-foreground hover:text-primary hover:scale-110 transition-all z-20 group-hover:opacity-100 opacity-0"
+        >
+          <PlusCircle size={14} />
+        </button>
+      )}
 
       {/* Chat hint on hover */}
       {!isGhost && (

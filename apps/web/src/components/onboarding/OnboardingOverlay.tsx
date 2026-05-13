@@ -233,7 +233,7 @@ function buildMapFromData(
 ): { nodes: MindMapNode[]; edges: MindMapEdge[] } {
   const now = new Date().toISOString()
   const rootId = crypto.randomUUID()
-  const branches = data.branches.slice(0, 6)
+  const branches = data.branches.slice(0, 10)
 
   const root: MindMapNode = {
     id: rootId,
@@ -296,9 +296,12 @@ function buildMapFromData(
       createdAt: now,
     })
 
-    const subNodes = (branch.subNodes ?? []).slice(0, 2)
-    subNodes.forEach((subLabel, j) => {
-      const subAngle = angle + ((j - 0.5) * Math.PI) / branches.length
+    const subNodes = (branch.subNodes ?? []).slice(0, 4)
+    subNodes.forEach((sub, j) => {
+      const subLabel = typeof sub === 'string' ? sub : sub.label
+      const subDetails = typeof sub === 'string' ? [] : (sub.details ?? [])
+
+      const subAngle = angle + ((j - (subNodes.length - 1) / 2) * 0.4)
       const subId = crypto.randomUUID()
       nodes.push({
         id: subId,
@@ -328,6 +331,44 @@ function buildMapFromData(
         createdBy: 'OnboardingAgent',
         metadata: {},
         createdAt: now,
+        updatedAt: now,
+      })
+
+      // Add 3rd level details
+      subDetails.slice(0, 3).forEach((detailLabel: string, k: number) => {
+        const detailAngle = subAngle + ((k - (subDetails.length - 1) / 2) * 0.3)
+        const detailId = crypto.randomUUID()
+        const R3 = 140
+        nodes.push({
+          id: detailId,
+          mindMapId: 'demo-map',
+          parentId: subId,
+          label: detailLabel,
+          content: null,
+          nodeType: 'fact',
+          positionX: cx + Math.cos(subAngle) * R2 + Math.cos(detailAngle) * R3,
+          positionY: cy + Math.sin(subAngle) * R2 + Math.sin(detailAngle) * R3,
+          depth: 3,
+          color: null,
+          noteContent: null,
+          createdBy: 'OnboardingAgent',
+          isDeleted: false,
+          metadata: {},
+          createdAt: now,
+          updatedAt: now,
+        })
+        edges.push({
+          id: crypto.randomUUID(),
+          mindMapId: 'demo-map',
+          sourceId: subId,
+          targetId: detailId,
+          label: null,
+          edgeType: 'child',
+          createdBy: 'OnboardingAgent',
+          metadata: {},
+          createdAt: now,
+          updatedAt: now,
+        })
       })
     })
   })
@@ -343,22 +384,32 @@ const SEED_BRANCHES: Record<string, string[]> = {
   default: [
     'Core Concepts', 'Key Questions', 'Hidden Assumptions',
     'Second-Order Effects', 'Who Benefits?', 'What Could Go Wrong?',
+    'Historical Context', 'Future Trajectory', 'Ethical Implications', 'Systemic Constraints',
   ],
   ai: [
     'Capabilities & Limits', 'Societal Impact', 'Alignment Problem',
     'Economic Disruption', 'Creative Potential', 'Governance & Policy',
+    'Human-AI Collaboration', 'Algorithmic Bias', 'Hardware Requirements', 'Safety Research',
   ],
   climate: [
     'Root Causes', 'Feedback Loops', 'Policy Levers',
     'Economic Trade-offs', 'Tech Solutions', 'Human Behavior',
+    'Global Inequity', 'Biodiversity Loss', 'Adaptation Strategies', 'Corporate Responsibility',
   ],
   education: [
     'Learning Science', 'Institutional Barriers', 'Technology Role',
     'Equity & Access', 'Future Skills', 'Alternative Models',
+    'Cognitive Development', 'Assessment Methods', 'Lifelong Learning', 'Teacher Support',
   ],
   startup: [
     'Problem Space', 'Customer Insight', 'Business Model',
     'Unfair Advantage', 'Risks & Unknowns', 'Go-to-Market',
+    'Scalability', 'Team Dynamics', 'Funding Options', 'Competitive Landscape',
+  ],
+  habits: [
+    'The Habit Loop', 'Atomic Changes', 'Identity-Based Habits',
+    'Environment Design', 'Social Influence', 'Overcoming Plateaus',
+    'Tracking & Review', 'Habit Stacking', 'Temptation Bundling', 'Reward Systems',
   ],
 }
 
@@ -368,6 +419,7 @@ function pickBranches(topic: string): string[] {
   if (t.includes('climate') || t.includes('environment') || t.includes('carbon')) return SEED_BRANCHES.climate
   if (t.includes('education') || t.includes('school') || t.includes('learn')) return SEED_BRANCHES.education
   if (t.includes('startup') || t.includes('business') || t.includes('product')) return SEED_BRANCHES.startup
+  if (t.includes('habit') || t.includes('routine') || t.includes('behavior')) return SEED_BRANCHES.habits
   return SEED_BRANCHES.default
 }
 
@@ -435,11 +487,12 @@ function generateSeedMap(topic: string): { nodes: MindMapNode[]; edges: MindMapE
       createdAt: now,
     })
 
-    // Add 2 sub-nodes per branch
+    // Add up to 4 sub-nodes per branch
     const subLabels = getSubLabels(label)
     const R2 = 200
+    const R3 = 140
     subLabels.forEach((subLabel, j) => {
-      const subAngle = angle + ((j - 0.5) * Math.PI) / branches.length
+      const subAngle = angle + ((j - (subLabels.length - 1) / 2) * 0.4)
       const subId = crypto.randomUUID()
       nodes.push({
         id: subId,
@@ -469,6 +522,44 @@ function generateSeedMap(topic: string): { nodes: MindMapNode[]; edges: MindMapE
         createdBy: 'OnboardingAgent',
         metadata: {},
         createdAt: now,
+        updatedAt: now,
+      })
+
+      // Add 3rd level: Details for each sub-node
+      const details = ['Specific detail', 'Deep dive']
+      details.forEach((detailLabel, k) => {
+        const detailAngle = subAngle + ((k - 0.5) * 0.3)
+        const detailId = crypto.randomUUID()
+        nodes.push({
+          id: detailId,
+          mindMapId: 'demo-map',
+          parentId: subId,
+          label: `${detailLabel}`,
+          content: null,
+          nodeType: 'fact',
+          positionX: Math.cos(angle) * R + Math.cos(subAngle) * R2 + Math.cos(detailAngle) * R3,
+          positionY: Math.sin(angle) * R + Math.sin(subAngle) * R2 + Math.sin(detailAngle) * R3,
+          depth: 3,
+          color: null,
+          noteContent: null,
+          createdBy: 'OnboardingAgent',
+          isDeleted: false,
+          metadata: {},
+          createdAt: now,
+          updatedAt: now,
+        })
+        edges.push({
+          id: crypto.randomUUID(),
+          mindMapId: 'demo-map',
+          sourceId: subId,
+          targetId: detailId,
+          label: null,
+          edgeType: 'child',
+          createdBy: 'OnboardingAgent',
+          metadata: {},
+          createdAt: now,
+          updatedAt: now,
+        })
       })
     })
   })
@@ -477,36 +568,66 @@ function generateSeedMap(topic: string): { nodes: MindMapNode[]; edges: MindMapE
 }
 
 const SUB_LABELS: Record<string, string[]> = {
-  'Core Concepts':        ['First principles', 'Key definitions'],
-  'Key Questions':        ['What do we not know?', 'What are we assuming?'],
-  'Hidden Assumptions':   ['Who decides?', 'What is taken for granted?'],
-  'Second-Order Effects': ['Unintended consequences', 'Ripple effects'],
-  'Who Benefits?':        ['Stakeholders', 'Power dynamics'],
-  'What Could Go Wrong?': ['Failure modes', 'Black swans'],
-  'Capabilities & Limits':['What it can do', 'Hard limits'],
-  'Societal Impact':      ['Job displacement', 'Power concentration'],
-  'Alignment Problem':    ['Value alignment', 'Control problem'],
-  'Economic Disruption':  ['Winners & losers', 'New markets'],
-  'Creative Potential':   ['Art & music', 'Scientific discovery'],
-  'Governance & Policy':  ['Regulation', 'International coordination'],
-  'Root Causes':          ['Industrial emissions', 'Land use'],
-  'Feedback Loops':       ['Tipping points', 'Amplifying cycles'],
-  'Policy Levers':        ['Carbon pricing', 'Regulation'],
-  'Economic Trade-offs':  ['Jobs vs environment', 'Short vs long term'],
-  'Tech Solutions':       ['Renewables', 'Carbon capture'],
-  'Human Behavior':       ['Individual action', 'Collective action'],
-  'Learning Science':     ['Memory & recall', 'Spaced repetition'],
-  'Institutional Barriers':['Funding models', 'Accreditation'],
-  'Technology Role':      ['AI tutors', 'Access gaps'],
-  'Equity & Access':      ['Digital divide', 'Cost barriers'],
-  'Future Skills':        ['Critical thinking', 'Adaptability'],
-  'Alternative Models':   ['Unschooling', 'Project-based'],
-  'Problem Space':        ['Pain points', 'Market size'],
-  'Customer Insight':     ['Who is the user?', 'Jobs to be done'],
-  'Business Model':       ['Revenue streams', 'Unit economics'],
-  'Unfair Advantage':     ['Distribution edge', 'Unique insight'],
-  'Risks & Unknowns':     ['Market risk', 'Execution risk'],
-  'Go-to-Market':         ['Early adopters', 'Growth loops'],
+  'Core Concepts':        ['First principles', 'Key definitions', 'Conceptual framework', 'Mental models'],
+  'Key Questions':        ['What do we not know?', 'What are we assuming?', 'What is the root cause?', 'How does this evolve?'],
+  'Hidden Assumptions':   ['Who decides?', 'What is taken for granted?', 'Implicit biases', 'Underlying values'],
+  'Second-Order Effects': ['Unintended consequences', 'Ripple effects', 'Delayed reactions', 'Counter-intuitive results'],
+  'Who Benefits?':        ['Stakeholders', 'Power dynamics', 'Marginalized groups', 'Indirect winners'],
+  'What Could Go Wrong?': ['Failure modes', 'Black swans', 'Worst-case scenarios', 'Systemic fragility'],
+  'Historical Context':   ['Origins', 'Key milestones', 'Past failures', 'Cyclical patterns'],
+  'Future Trajectory':    ['Scenario planning', 'Wild cards', 'Probable outcomes', 'Desired future'],
+  'Ethical Implications': ['Moral trade-offs', 'Responsibility', 'Justice & Equity', 'Rights & Duties'],
+  'Systemic Constraints': ['Resource limits', 'Physical laws', 'Political boundaries', 'Temporal factors'],
+  'Capabilities & Limits':['What it can do', 'Hard limits', 'State of the art', 'Computational bounds'],
+  'Societal Impact':      ['Job displacement', 'Power concentration', 'Social cohesion', 'Human dignity'],
+  'Alignment Problem':    ['Value alignment', 'Control problem', 'Incentive design', 'Human-centeredness'],
+  'Economic Disruption':  ['Winners & losers', 'New markets', 'Labor shifts', 'Wealth distribution'],
+  'Creative Potential':   ['Art & music', 'Scientific discovery', 'New forms of expression', 'Human-AI co-creation'],
+  'Governance & Policy':  ['Regulation', 'International coordination', 'Standard setting', 'Liability frameworks'],
+  'Human-AI Collaboration':['Augmented intelligence', 'Decision support', 'Skill preservation', 'Human-in-the-loop'],
+  'Algorithmic Bias':     ['Data representation', 'Transparency', 'Fairness metrics', 'Feedback loops'],
+  'Hardware Requirements':['Compute resources', 'Energy consumption', 'Supply chains', 'Specialized chips'],
+  'Safety Research':      ['Robustness', 'Interpretability', 'Formal verification', 'Containment'],
+  'Root Causes':          ['Industrial emissions', 'Land use', 'Deforestation', 'Methane leaks'],
+  'Feedback Loops':       ['Tipping points', 'Amplifying cycles', 'Self-reinforcing effects', 'Dampening mechanisms'],
+  'Policy Levers':        ['Carbon pricing', 'Regulation', 'Subsidies', 'International treaties'],
+  'Economic Trade-offs':  ['Jobs vs environment', 'Short vs long term', 'Development vs conservation', 'Market externalities'],
+  'Tech Solutions':       ['Renewables', 'Carbon capture', 'Energy storage', 'Nuclear fusion'],
+  'Human Behavior':       ['Individual action', 'Collective action', 'Consumption patterns', 'Political will'],
+  'Global Inequity':      ['Global North vs South', 'Climate justice', 'Technology transfer', 'Resource access'],
+  'Biodiversity Loss':    ['Ecosystem collapse', 'Extinction rates', 'Trophic cascades', 'Genetic diversity'],
+  'Adaptation Strategies':['Resilient infrastructure', 'Managed retreat', 'Crop diversification', 'Disaster preparedness'],
+  'Corporate Responsibility':['ESG metrics', 'Greenwashing', 'Supply chain audits', 'Sustainable investment'],
+  'Learning Science':     ['Memory & recall', 'Spaced repetition', 'Cognitive load', 'Metacognition'],
+  'Institutional Barriers':['Funding models', 'Accreditation', 'Siloed disciplines', 'Resistance to change'],
+  'Technology Role':      ['AI tutors', 'Access gaps', 'Personalized learning', 'Immersive environments'],
+  'Equity & Access':      ['Digital divide', 'Cost barriers', 'Inclusive design', 'Language access'],
+  'Future Skills':        ['Critical thinking', 'Adaptability', 'Emotional intelligence', 'Digital literacy'],
+  'Alternative Models':   ['Unschooling', 'Project-based', 'Montessori', 'Flipped classrooms'],
+  'Cognitive Development':['Brain plasticity', 'Executive function', 'Social-emotional learning', 'Motivation'],
+  'Assessment Methods':   ['Standardized testing', 'Portfolio assessment', 'Continuous feedback', 'Skill badges'],
+  'Lifelong Learning':    ['Upskilling', 'Micro-credentials', 'Self-directed learning', 'Community education'],
+  'Teacher Support':      ['Professional development', 'Workload reduction', 'Autonomy', 'Collaboration tools'],
+  'Problem Space':        ['Pain points', 'Market size', 'Urgency', 'Frequency'],
+  'Customer Insight':     ['Who is the user?', 'Jobs to be done', 'User journey', 'Empathy mapping'],
+  'Business Model':       ['Revenue streams', 'Unit economics', 'Retention strategy', 'Pricing strategy'],
+  'Unfair Advantage':     ['Distribution edge', 'Unique insight', 'Network effects', 'Intellectual property'],
+  'Risks & Unknowns':     ['Market risk', 'Execution risk', 'Regulatory risk', 'Technical risk'],
+  'Go-to-Market':         ['Early adopters', 'Growth loops', 'Channel strategy', 'Brand positioning'],
+  'Scalability':          ['Viral loops', 'Infrastructural needs', 'Process automation', 'Global expansion'],
+  'Team Dynamics':        ['Culture', 'Hiring strategy', 'Shared vision', 'Conflict resolution'],
+  'Funding Options':      ['Bootstrapping', 'Venture capital', 'Angel investors', 'Crowdfunding'],
+  'Competitive Landscape':['Direct competitors', 'Indirect threats', 'Substitute products', 'Market fragmentation'],
+  'The Habit Loop':       ['Cue/Trigger', 'Craving', 'Response/Routine', 'Reward'],
+  'Atomic Changes':       ['1% gains', 'Starting small', 'Consistency vs Intensity', 'Compound effects'],
+  'Identity-Based Habits':['Who you want to be', 'Small wins', 'Self-image', 'Belief systems'],
+  'Environment Design':   ['Reducing friction', 'Visual cues', 'Context switching', 'Designing for success'],
+  'Social Influence':     ['Peer groups', 'Accountability', 'Social norms', 'Role models'],
+  'Overcoming Plateaus':  ['Valley of disappointment', 'Plateau of latent potential', 'Sticking with it', 'System adjustments'],
+  'Tracking & Review':    ['Habit trackers', 'Reflective practice', 'Data-driven insights', 'Adjusting goals'],
+  'Habit Stacking':       ['After [current habit], I will [new habit]', 'Trigger mapping', 'Anchoring', 'Sequence design'],
+  'Temptation Bundling':  ['Pairing wants with needs', 'Immediate gratification', 'Long-term rewards', 'Incentive design'],
+  'Reward Systems':       ['Dopamine hits', 'Intrinsic vs Extrinsic', 'Celebrating wins', 'Reinforcement'],
 }
 
 function getSubLabels(branch: string): string[] {

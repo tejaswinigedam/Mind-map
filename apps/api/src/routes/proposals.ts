@@ -90,4 +90,22 @@ export async function proposalsRoute(app: FastifyInstance) {
       return reply.status(200).send({ rejected: true })
     },
   )
+
+  // Trigger agent request via REST
+  app.post('/agent', async (req, reply) => {
+    const body = req.body as any
+    const job = await app.bull.add(
+      'agent-tasks',
+      'agent-request',
+      {
+        ...body,
+        userId: 'dev-user',
+      },
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 },
+      },
+    )
+    return reply.status(202).send({ jobId: job.id })
+  })
 }

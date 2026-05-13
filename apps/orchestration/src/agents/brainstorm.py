@@ -20,7 +20,7 @@ Guidelines:
 - Vary the types: some factual, some questions, some provocative claims, some frameworks.
 - Output in valid JSON only — no commentary outside the JSON.
 - NEVER claim certainty. Flag speculative ideas clearly.
-- Aim for 4-7 diverse nodes unless the user requests more or fewer.
+- Aim for 8-12 diverse nodes to ensure a wide breadth of ideas.
 
 Output format (JSON array):
 [
@@ -64,16 +64,17 @@ Focus on: {prefs.get('domain_glossary', {}).get('focus', 'diverse perspectives')
         messages=[{"role": "user", "content": user_message}],
     )
 
+    suggestions = []
     try:
         raw = response.content[0].text.strip()
-        # Strip markdown code fences if present
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
+        if "```json" in raw:
+            raw = raw.split("```json")[1].split("```")[0]
+        elif "```" in raw:
+            raw = raw.split("```")[1].split("```")[0]
+            
         suggestions = json.loads(raw.strip())
-    except (json.JSONDecodeError, IndexError):
-        return {**state, "brainstorm_nodes": [], "error": "BrainstormAgent: failed to parse output"}
+    except Exception:
+        pass
 
     nodes: list[ProposalNode] = []
     parent_id = state.get("node_id")
@@ -99,20 +100,18 @@ Focus on: {prefs.get('domain_glossary', {}).get('focus', 'diverse perspectives')
 
 
 def _find_node(nodes: list, node_id: str | None) -> dict | None:
-    if not node_id:
-        return None
+    if not node_id: return None
     return next((n for n in nodes if n["id"] == node_id), None)
 
 
 def _summarize_map(graph: dict) -> str:
     nodes = graph.get("nodes", [])
-    if not nodes:
-        return "Empty map (just starting)"
-    labels = [n["label"] for n in nodes[:10]]
-    more = f" (+{len(nodes) - 10} more)" if len(nodes) > 10 else ""
+    if not nodes: return "Empty map"
+    labels = [n["label"] for n in nodes[:15]]
+    more = "..." if len(nodes) > 15 else ""
     return f"{len(nodes)} nodes including: {', '.join(labels)}{more}"
 
 
 def _target_count(prefs: dict) -> int:
-    breadth = prefs.get("preferred_breadth", 3)
-    return max(3, min(8, breadth + 2))
+    breadth = prefs.get("preferred_breadth", 4)
+    return max(6, min(12, breadth + 4))

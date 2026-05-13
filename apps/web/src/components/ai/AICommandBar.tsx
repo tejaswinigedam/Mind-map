@@ -4,11 +4,12 @@ import { Sparkles, HelpCircle } from 'lucide-react'
 import { useMindMapStore } from '@/stores/mindMapStore'
 import { useAgentStore } from '@/stores/agentStore'
 import { useUIStore } from '@/stores/uiStore'
+import { getSocket } from '@/lib/socket'
 
 const SLASH_COMMANDS = [
   { cmd: '/brainstorm', intent: 'brainstorm', desc: 'Generate creative ideas around selected node' },
   { cmd: '/research', intent: 'research', desc: 'Search web and find facts about selected node' },
-  { cmd: '/dive-deeper', intent: 'dive_deeper', desc: 'Explore subtopics and angles in depth' },
+  { cmd: '/dive deeper', intent: 'dive_deeper', desc: 'Rapidly expand breadth and depth of subtopics' },
   { cmd: '/structure', intent: 'structure', desc: 'Analyze and propose map reorganization' },
   { cmd: '/summarize', intent: 'summarize', desc: 'Summarize selected branch as text' },
   { cmd: '/critique', intent: 'critique', desc: 'Find gaps, contradictions, and redundancies' },
@@ -43,12 +44,24 @@ export function AICommandBar() {
     }
   }, [input])
 
-  const dispatch = (intent: Intent, text: string) => {
+  const setAgentThinking = useAgentStore((s) => s.setAgentThinking)
+  const clearAgentThinking = useAgentStore((s) => s.clearAgentThinking)
+  const addProposal = useAgentStore((s) => s.addProposal)
+
+  const dispatch = async (intent: Intent, text: string) => {
+    if (!selectedNode && intent !== 'onboard') return
+
     console.log('[AI] dispatch', intent, text)
-    // When backend is connected:
-    // const socket = getSocket()
-    // socket.emit('agent:request', { sessionId: '', nodeId: selectedNode?.id, intent, text: text || undefined, graphSnapshot: { nodes, edges } })
-    // socket.once('agent:ack', ({ jobId }: { jobId: string }) => addJobId(jobId))
+    const socket = getSocket()
+    
+    socket.emit('agent:request', {
+      intent,
+      text,
+      nodeId: selectedNode?.id,
+      nodeLabel: selectedNode?.label,
+      graphSnapshot: { nodes, edges }
+    } as any)
+
     setInput('')
     setIsExpanded(false)
   }

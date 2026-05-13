@@ -9,8 +9,18 @@ export type AgentName =
   | 'SocraticAgent'
   | 'NodeConversationAgent'
   | 'PersonalizationAgent'
+  | 'CognitiveStateAgent'
+  | 'DecompositionAgent'
+  | 'SystemsAgent'
+  | 'CriticalAgent'
+  | 'AlternativeAgent'
+  | 'DecisionAgent'
+  | 'SynthesisAgent'
+  | 'FocusAgent'
+  | 'RecommendationAgent'
+  | 'ReflectionAgent'
 
-export type ProposalType = 'nodes' | 'restructure' | 'summary' | 'critique' | 'onboarding' | 'socratic_question'
+export type ProposalType = 'nodes' | 'restructure' | 'summary' | 'critique' | 'onboarding' | 'socratic_question' | 'insight'
 export type ProposalStatus = 'pending' | 'accepted' | 'rejected' | 'edited' | 'expired'
 export type ConfidenceLevel = 'high' | 'medium' | 'low'
 
@@ -64,6 +74,10 @@ export interface ProposalPayload {
   }
   question?: string
   answer_context?: string
+  insight_type?: string
+  title?: string
+  content?: string
+  metadata?: Record<string, unknown>
 }
 
 export interface AgentThinkingEvent {

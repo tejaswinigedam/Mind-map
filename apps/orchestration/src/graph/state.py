@@ -38,6 +38,20 @@ class ProposalNode(TypedDict):
     metadata: dict
 
 
+class ThinkingInsight(TypedDict):
+    insight_type: str  # critical, systems, alternative, decision, etc.
+    title: str
+    content: str
+    node_id: Optional[str]
+    metadata: dict
+
+
+class CognitiveState(TypedDict):
+    state: str  # brainstorming, stuck, prioritizing, reflecting, etc.
+    confidence: float
+    reasoning: str
+
+
 class AgentState(TypedDict):
     # Input
     user_id: str
@@ -51,6 +65,8 @@ class AgentState(TypedDict):
 
     # Orchestrator decision
     agent_plan: List[str]  # which agents to invoke
+    cognitive_state: Optional[CognitiveState]
+    memory_context: List[str]
 
     # Agent outputs (accumulated)
     brainstorm_nodes: List[ProposalNode]
@@ -59,6 +75,8 @@ class AgentState(TypedDict):
     summary_text: Optional[str]
     critique_report: Optional[dict]
     onboarding_nodes: List[ProposalNode]
+    thinking_insights: List[ThinkingInsight]
+    visual_directives: List[dict]
 
     # Merged output
     final_proposals: List[dict]

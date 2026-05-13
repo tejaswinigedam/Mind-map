@@ -9,121 +9,6 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
-      // Inline API plugin — handles /api/seed without a separate backend
-      {
-        name: 'seed-api',
-        configureServer(server) {
-          server.middlewares.use('/api/seed', (req, res) => {
-            if (req.method !== 'POST') {
-              res.writeHead(405)
-              res.end('Method Not Allowed')
-              return
-            }
-
-            let body = ''
-            req.on('data', (chunk: Buffer) => { body += chunk.toString() })
-            req.on('end', () => {
-              let topic = ''
-              let purpose = 'brainstorm'
-              try {
-                const parsed = JSON.parse(body)
-                topic = parsed.topic ?? ''
-                purpose = parsed.purpose ?? 'brainstorm'
-              } catch {
-                res.writeHead(400)
-                res.end('Bad JSON')
-                return
-              }
-
-              const apiKey = env.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_API_KEY ?? ''
-              if (!apiKey || apiKey.startsWith('sk-ant-...') || apiKey === '') {
-                // Return a fallback when no key is configured
-                res.writeHead(200, { 'Content-Type': 'application/json' })
-                res.end(JSON.stringify(buildFallback(topic)))
-                return
-              }
-
-              const systemPrompt = `You are a mind map generator. Given a topic and purpose, generate a structured mind map with a root node, 5-6 first-level branch nodes, and 2 sub-nodes per branch.
-
-IMPORTANT RULES:
-- All labels must be DIRECTLY and SPECIFICALLY relevant to the given topic
-- No generic labels like "Core Concepts" or "Key Questions" — make them topic-specific
-- Branch nodes should represent real, meaningful dimensions of the topic
-- Sub-nodes should be concrete aspects, examples, or questions within their branch
-- For purpose="${purpose}", angle the map accordingly:
-  - brainstorm: diverse angles, creative connections, what-ifs
-  - research: key facts, debates, evidence, sources to check
-  - planning: goals, steps, blockers, resources
-  - learning: fundamentals, advanced concepts, common misconceptions
-
-Respond ONLY with valid JSON in this exact format:
-{
-  "rootLabel": "string",
-  "branches": [
-    {
-      "label": "string",
-      "subNodes": ["string", "string"]
-    }
-  ]
-}`
-
-              const userPrompt = `Topic: "${topic}"
-Purpose: ${purpose}
-
-Generate a specific, insightful mind map. Every label must be directly about this topic.`
-
-              const requestBody = JSON.stringify({
-                model: 'claude-haiku-4-5-20251001',
-                max_tokens: 1024,
-                system: systemPrompt,
-                messages: [{ role: 'user', content: userPrompt }],
-              })
-
-              const options = {
-                hostname: 'api.anthropic.com',
-                path: '/v1/messages',
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'x-api-key': apiKey,
-                  'anthropic-version': '2023-06-01',
-                  'Content-Length': Buffer.byteLength(requestBody),
-                },
-              }
-
-              const apiReq = https.request(options, (apiRes) => {
-                let data = ''
-                apiRes.on('data', (chunk: Buffer) => { data += chunk.toString() })
-                apiRes.on('end', () => {
-                  try {
-                    const parsed = JSON.parse(data)
-                    const text = parsed.content?.[0]?.text ?? ''
-                    // Extract JSON from the response
-                    const jsonMatch = text.match(/\{[\s\S]*\}/)
-                    if (!jsonMatch) throw new Error('No JSON in response')
-                    const mapData = JSON.parse(jsonMatch[0])
-                    res.writeHead(200, { 'Content-Type': 'application/json' })
-                    res.end(JSON.stringify(mapData))
-                  } catch (e) {
-                    console.error('[seed-api] parse error:', e)
-                    res.writeHead(200, { 'Content-Type': 'application/json' })
-                    res.end(JSON.stringify(buildFallback(topic)))
-                  }
-                })
-              })
-
-              apiReq.on('error', (e: Error) => {
-                console.error('[seed-api] request error:', e.message)
-                res.writeHead(200, { 'Content-Type': 'application/json' })
-                res.end(JSON.stringify(buildFallback(topic)))
-              })
-
-              apiReq.write(requestBody)
-              apiReq.end()
-            })
-          })
-        },
-      },
     ],
     resolve: {
       alias: {
@@ -132,6 +17,12 @@ Generate a specific, insightful mind map. Every label must be directly about thi
     },
     server: {
       port: 3000,
+      proxy: {
+        '/api': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+        },
+      },
     },
   }
 })
@@ -139,15 +30,106 @@ Generate a specific, insightful mind map. Every label must be directly about thi
 // Fallback when no API key — generates passable topic-aware labels
 function buildFallback(topic: string): { rootLabel: string; branches: Array<{ label: string; subNodes: string[] }> } {
   const t = topic.trim()
-  return {
-    rootLabel: t,
-    branches: [
-      { label: `What is ${t}?`, subNodes: ['Definition', 'History & origins'] },
-      { label: `Why does ${t} matter?`, subNodes: ['Real-world impact', 'Who is affected?'] },
-      { label: `How does ${t} work?`, subNodes: ['Key mechanisms', 'Step-by-step process'] },
-      { label: `Challenges in ${t}`, subNodes: ['Main obstacles', 'Unsolved problems'] },
-      { label: `Future of ${t}`, subNodes: ['Emerging trends', 'Open questions'] },
-      { label: `Perspectives on ${t}`, subNodes: ['Supporting views', 'Counterarguments'] },
+  const tl = t.toLowerCase()
+
+  const topicMap: Record<string, any> = {
+    habit: [
+      { label: 'The Science of Formation', subNodes: ['The habit loop (Cue-Routine-Reward)', 'Neuroplasticity & neural pathways', 'Dopamine feedback loops', 'Basal ganglia role'] },
+      { label: 'Strategic Implementation', subNodes: ['Habit stacking techniques', 'Implementation intentions', 'Atomic changes (1% rule)', 'Environment design'] },
+      { label: 'Psychological Barriers', subNodes: ['The valley of disappointment', 'Decision fatigue', 'Identity-based friction', 'Overcoming initial resistance'] },
+      { label: 'Tracking & Consistency', subNodes: ['Visual habit trackers', 'Accountability systems', 'Maintaining streaks', 'Recovery after failure'] },
+      { label: 'Social & Environment', subNodes: ['Social contagion effect', 'Designing for cues', 'Peer accountability', 'Removing negative triggers'] },
     ],
+    ai: [
+      { label: 'Core Architectures', subNodes: ['Transformers & Attention', 'Neural networks', 'Large Language Models', 'Training methodologies'] },
+      { label: 'Ethical Implications', subNodes: ['Algorithmic bias', 'Alignment problem', 'Job displacement', 'Data privacy'] },
+      { label: 'Practical Applications', subNodes: ['Agentic workflows', 'Content generation', 'Predictive analytics', 'Scientific discovery'] },
+      { label: 'Technical Challenges', subNodes: ['Compute scaling laws', 'Hallucination mitigation', 'Inference optimization', 'Context window limits'] },
+    ],
+    education: [
+      { label: 'Pedagogical Models', subNodes: ['Inquiry-based learning', 'Active recall & repetition', 'Flipped classroom', 'Personalized learning'] },
+      { label: 'Technological Shift', subNodes: ['AI in the classroom', 'Virtual environments', 'MOOCs & accessibility', 'Digital literacy'] },
+      { label: 'Cognitive Science', subNodes: ['Metacognition', 'Working memory limits', 'Scaffolding techniques', 'Motivation & engagement'] },
+    ]
   }
+
+  // Find best match category
+  let branches = topicMap.default
+  for (const [key, val] of Object.entries(topicMap)) {
+    if (tl.includes(key)) {
+      branches = val
+      break
+    }
+  }
+
+  // Fallback for unknown topics — make it more dynamic than before
+  if (!branches) {
+    branches = [
+      { label: `Core Mechanisms of ${t}`, subNodes: [`Fundamental principles of ${t}`, `Step-by-step process`, `Interconnected components`, `Primary drivers`] },
+      { label: `Practical Implementation`, subNodes: [`Best practices for ${t}`, `Common tools & resources`, `Real-world use cases`, `Optimization strategies`] },
+      { label: `Challenges & Obstacles`, subNodes: [`Technical limitations`, `Psychological barriers`, `External dependencies`, `Ethical considerations`] },
+      { label: `Evolution & Future Trends`, subNodes: [`Historical development`, `Emerging innovations`, `Long-term predictions`, `Scaling potential`] },
+      { label: `Systemic Impact`, subNodes: [`Economic influence`, `Social/Cultural effects`, `Environmental footprint`, `Stakeholder analysis`] },
+      { label: `Strategic Perspectives`, subNodes: [`Expert opinions`, `Contrarian views`, `Alternative frameworks`, `Comparative analysis`] },
+    ]
+  }
+
+  return { rootLabel: t, branches }
+}
+function buildAgentFallback(nodeId: string, nodeLabel: string): any[] {
+  const t = nodeLabel.toLowerCase()
+  let labels = [
+    `Key components of ${nodeLabel}`,
+    `Challenges related to ${nodeLabel}`,
+    `Future trends in ${nodeLabel}`,
+    `Historical context of ${nodeLabel}`,
+    `Best practices for ${nodeLabel}`,
+    `Common questions about ${nodeLabel}`,
+  ]
+
+  if (t.includes('habit') || t.includes('routine')) {
+    labels = [
+      'The Cue-Routine-Reward loop',
+      'Reducing friction for start',
+      'Habit stacking techniques',
+      'Implementation intentions',
+      'Tracking and accountability',
+      'Overcoming the valley of disappointment'
+    ]
+  } else if (t.includes('ai') || t.includes('intelligence')) {
+    labels = [
+      'Model architectures',
+      'Training data quality',
+      'Ethics and bias mitigation',
+      'Deployment strategies',
+      'Human-in-the-loop systems',
+      'Emergent capabilities'
+    ]
+  } else if (t.includes('climate') || t.includes('carbon')) {
+    labels = [
+      'Emission reduction targets',
+      'Carbon capture technologies',
+      'Renewable energy integration',
+      'Policy and regulation',
+      'Economic incentives',
+      'Adaptation and resilience'
+    ]
+  }
+
+  return [{
+    id: Math.random().toString(36).substring(7),
+    proposalType: 'nodes',
+    agentName: 'BrainstormAgent',
+    status: 'pending',
+    payload: {
+      nodes: labels.map((label) => ({
+        tempId: Math.random().toString(36).substring(7),
+        label,
+        content: `Detailed exploration of ${label}.`,
+        nodeType: 'concept',
+        parentId: nodeId,
+        confidence: 0.7
+      }))
+    }
+  }]
 }

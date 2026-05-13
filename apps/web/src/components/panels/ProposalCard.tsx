@@ -18,6 +18,16 @@ const AGENT_LABELS: Record<string, string> = {
   StructureAgent: 'Structure',
   OnboardingAgent: 'Onboarding',
   NodeConversationAgent: 'From chat',
+  CognitiveStateAgent: 'Cognitive',
+  DecompositionAgent: 'Decomposition',
+  SystemsAgent: 'Systems',
+  CriticalAgent: 'Critical',
+  AlternativeAgent: 'Alternatives',
+  DecisionAgent: 'Decision',
+  SynthesisAgent: 'Synthesis',
+  FocusAgent: 'Focus',
+  RecommendationAgent: 'Next Step',
+  ReflectionAgent: 'Reflection',
 }
 
 interface ProposalCardProps {
@@ -37,25 +47,39 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
     // Optimistically add nodes to canvas
     if (proposal.payload.nodes) {
       const now = new Date().toISOString()
+      
+      // Create a map from tempId to the new real UUID
+      const idMap: Record<string, string> = {}
+      proposal.payload.nodes.forEach(pn => {
+        idMap[pn.tempId] = crypto.randomUUID()
+      })
+
       addNodes(
-        proposal.payload.nodes.map((pn) => ({
-          id: crypto.randomUUID(),
-          mindMapId: proposal.mindMapId,
-          parentId: pn.parentId,
-          label: pn.label,
-          content: pn.content,
-          nodeType: pn.nodeType as 'concept',
-          positionX: 0,
-          positionY: 0,
-          depth: 1,
-          color: null,
-          noteContent: null,
-          createdBy: proposal.agentName as 'BrainstormAgent',
-          isDeleted: false,
-          metadata: pn.metadata ?? {},
-          createdAt: now,
-          updatedAt: now,
-        })),
+        proposal.payload.nodes.map((pn) => {
+          const newId = idMap[pn.tempId]
+          // If the parentId exists in our map, use the new UUID. 
+          // Otherwise, assume it's an existing node ID on the canvas.
+          const finalParentId = (pn.parentId && idMap[pn.parentId]) ? idMap[pn.parentId] : pn.parentId
+
+          return {
+            id: newId,
+            mindMapId: proposal.mindMapId,
+            parentId: finalParentId,
+            label: pn.label,
+            content: pn.content,
+            nodeType: pn.nodeType as 'concept',
+            positionX: 0,
+            positionY: 0,
+            depth: 1, // Store should recalculate this or we could try to derive it
+            color: null,
+            noteContent: null,
+            createdBy: proposal.agentName as 'BrainstormAgent',
+            isDeleted: false,
+            metadata: pn.metadata ?? {},
+            createdAt: now,
+            updatedAt: now,
+          }
+        }),
         `Accept proposal from ${proposal.agentName}`,
       )
     }
@@ -131,6 +155,21 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
             <p className="text-[10px] text-muted-foreground pl-2.5">
               +{proposal.payload.nodes.length - 4} more
             </p>
+          )}
+        </div>
+      )}
+
+      {/* Insight preview */}
+      {proposal.proposalType === 'insight' && (
+        <div className="px-3 pb-2 space-y-1.5">
+          <p className="text-xs font-semibold text-foreground">{proposal.payload.title}</p>
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            {proposal.payload.content}
+          </p>
+          {proposal.payload.insight_type === 'critical' && (
+            <div className="flex items-center gap-1 text-[9px] text-orange-500 font-medium bg-orange-500/10 w-fit px-1.5 py-0.5 rounded">
+              <AlertTriangle size={8} /> Logic Check
+            </div>
           )}
         </div>
       )}

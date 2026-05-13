@@ -75,8 +75,9 @@ function MindMapCanvasInner() {
     const ghosts: Node[] = pendingProposals
       .filter((p) => p.status === 'pending' && p.proposalType === 'nodes')
       .flatMap((proposal) =>
-        (proposal.payload.nodes ?? []).map((pn: NonNullable<typeof proposal.payload.nodes>[number]) =>
-          toRFNode(
+        (proposal.payload.nodes ?? []).map((pn: any) => {
+          const parent = mmNodes.find((n) => n.id === pn.parentId)
+          return toRFNode(
             {
               id: `ghost-${pn.tempId}`,
               mindMapId: '',
@@ -84,9 +85,9 @@ function MindMapCanvasInner() {
               label: pn.label,
               content: pn.content,
               nodeType: pn.nodeType as MMNode['nodeType'],
-              positionX: 0,
-              positionY: 0,
-              depth: 1,
+              positionX: (parent?.positionX ?? 0) + 200,
+              positionY: (parent?.positionY ?? 0),
+              depth: (parent?.depth ?? 0) + 1,
               color: null,
               noteContent: null,
               createdBy: proposal.agentName as MMNode['createdBy'],
@@ -96,8 +97,8 @@ function MindMapCanvasInner() {
               updatedAt: new Date().toISOString(),
             },
             true,
-          ),
-        ),
+          )
+        }),
       )
     return [...real, ...ghosts]
   }, [mmNodes, pendingProposals])
