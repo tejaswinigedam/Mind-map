@@ -1,10 +1,8 @@
 """
-NodeConversationAgent — Powers per-node chat panel.
+NodeConversationAgent - Powers per-node chat panel.
 Maintains conversation scoped to a single node + its position in the map.
-Extracts new node proposals from the conversation.
 """
 import uuid
-import json
 from anthropic import Anthropic
 from ..config import SONNET_MODEL
 from ..graph.state import AgentState
@@ -19,22 +17,14 @@ You have full awareness of:
 
 Your behaviors:
 - Answer deep questions about this node's concept with nuance and specificity
-- Occasionally challenge the user's framing ("You're treating X as a cause — could it be a consequence?")
-- When you mention ideas that could become new map nodes, mark them with {{NEW_NODE: label}} syntax
+- When the request is broad, vague, or underspecified, ask one concise clarifying question before answering
+- Occasionally challenge the user's framing ("You're treating X as a cause - could it be a consequence?")
 - Keep responses concise (3-5 sentences) unless the user asks for depth
 - Be intellectually honest: distinguish what you know confidently from what is uncertain
-- Ask a follow-up question at the end of each response to keep the exploration going
+- Prefer natural language over special tags or markers
+- End with a question only when it genuinely helps move the discussion forward
 
-When you see {{NEW_NODE: label}} patterns in your response, the system will automatically offer to add those to the map."""
-
-EXTRACT_PROMPT = """Extract any potential new mind map nodes from this AI response.
-Look for concepts marked as {{NEW_NODE: label}} or concepts that are clearly distinct ideas worth mapping.
-Output JSON array or empty array [].
-
-Format:
-[
-  {"label": "Concise node label", "content": "Brief elaboration", "nodeType": "concept|fact|question"}
-]"""
+When you identify a promising side idea, mention it naturally in the response rather than using special tags."""
 
 
 def run_node_conversation(data: dict) -> dict:
@@ -55,7 +45,6 @@ def run_node_conversation(data: dict) -> dict:
     new_message = data.get("new_message", "")
     conversation_id = data.get("conversation_id", str(uuid.uuid4()))
 
-    # Build system context
     context_parts = [f"You are attached to the node: '{node_label}'"]
     if data.get("node_content"):
         context_parts.append(f"Node content: {data['node_content']}")
@@ -70,10 +59,9 @@ def run_node_conversation(data: dict) -> dict:
 
     system = SYSTEM_PROMPT + "\n\nContext:\n" + "\n".join(context_parts)
 
-    # Build message history
     history = [
         {"role": msg["role"], "content": msg["content"]}
-        for msg in messages[-10:]  # last 10 messages for context window efficiency
+        for msg in messages[-10:]
     ]
     history.append({"role": "user", "content": new_message})
 
@@ -87,55 +75,9 @@ def run_node_conversation(data: dict) -> dict:
 
     content = response.content[0].text.strip()
 
-    # Extract potential new nodes
-    extracted_proposals = _extract_proposals(content, data.get("node_id", ""))
-
-    # Clean {{NEW_NODE: x}} markers from display content
-    display_content = content.replace("{{", "**").replace("}}", "**")
-
     return {
         "conversationId": conversation_id,
         "nodeId": data.get("node_id", ""),
-        "content": display_content,
-        "extractedProposals": extracted_proposals,
+        "content": content,
+        "extractedProposals": [],
     }
-
-
-def _extract_proposals(content: str, parent_id: str) -> list:
-    """Extract NEW_NODE markers from response."""
-    import re
-    proposals = []
-    pattern = r'\{\{NEW_NODE:\s*([^}]+)\}\}'
-    matches = re.findall(pattern, content)
-
-    for label in matches:
-        proposals.append({
-            "id": str(uuid.uuid4()),
-            "sessionId": "",
-            "mindMapId": "",
-            "agentName": "NodeConversationAgent",
-            "promptVersion": "1.0.0",
-            "proposalType": "nodes",
-            "status": "pending",
-            "payload": {
-                "nodes": [{
-                    "tempId": str(uuid.uuid4()),
-                    "label": label.strip(),
-                    "content": None,
-                    "nodeType": "concept",
-                    "parentId": parent_id,
-                    "confidence": 0.7,
-                    "sources": [],
-                    "metadata": {"fromConversation": True},
-                }]
-            },
-            "confidenceLevel": "medium",
-            "confidenceScore": 0.7,
-            "reasoning": f"Surfaced during conversation about '{label.strip()}'",
-            "sources": [],
-            "userEdit": None,
-            "createdAt": "",
-            "resolvedAt": None,
-        })
-
-    return proposals

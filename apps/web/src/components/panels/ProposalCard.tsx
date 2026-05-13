@@ -182,7 +182,7 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
             className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
           >
             {isReasoningOpen ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-            Why did AI suggest this?
+            Why was this suggested?
           </button>
           {isReasoningOpen && (
             <p className="mt-1.5 text-[11px] text-muted-foreground leading-relaxed bg-secondary/50 rounded-lg p-2">

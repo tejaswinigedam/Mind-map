@@ -24,7 +24,7 @@ export function SuggestionPanel() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-foreground">AI Suggestions</h2>
+              <h2 className="text-sm font-semibold text-foreground">Suggestions</h2>
               {pendingProposals.length > 0 && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
                   {pendingProposals.length}
@@ -56,7 +56,7 @@ export function SuggestionPanel() {
             {pendingProposals.length === 0 && activeAgents.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Select a node and use the AI command bar to generate suggestions.
+                  Select a node and use the command bar to generate suggestions.
                 </p>
                 <p className="text-[10px] text-muted-foreground/60 mt-2">
                   Try: /brainstorm · /research · /dive-deeper

@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Send, Plus, FileText, Brain, ChevronRight } from 'lucide-react'
 import { useUIStore } from '@/stores/uiStore'
 import { useMindMapStore, getDepthColor } from '@/stores/mindMapStore'
-import { useAgentStore } from '@/stores/agentStore'
 
 interface ChatMessage {
   id: string
@@ -21,32 +20,22 @@ export function NodeChatPanel() {
     node?.parentId ? s.nodes.find((n) => n.id === node.parentId) : null,
   )
   const updateNodeNote = useMindMapStore((s) => s.updateNodeNote)
-  const addProposal = useAgentStore((s) => s.addProposal)
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [note, setNote] = useState(node?.noteContent ?? '')
   const [activeTab, setActiveTab] = useState<'chat' | 'notes'>('chat')
-  const [conversationId, setConversationId] = useState<string | undefined>()
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  // Scroll to bottom on new message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Sync note from store
   useEffect(() => {
     setNote(node?.noteContent ?? '')
   }, [node?.noteContent])
-
-  // Listen for conversation replies (when backend is connected)
-  useEffect(() => {
-    // Placeholder — backend connection wired via useSocket hook in production
-  }, [chatNodeId, addProposal])
 
   const handleSend = () => {
     if (!input.trim() || isLoading || !chatNodeId) return
@@ -62,7 +51,6 @@ export function NodeChatPanel() {
     setInput('')
     setIsLoading(true)
 
-    // Simulate AI response in demo mode (replace with socket when backend is live)
     setTimeout(() => {
       setIsLoading(false)
       setMessages((prev) => [
@@ -70,7 +58,7 @@ export function NodeChatPanel() {
         {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: `That's an interesting angle on "${node?.label}". When the AI backend is connected, I'll give you a deep, contextual response here — challenging assumptions, surfacing {{NEW_NODE: Related concept}} ideas, and helping you go further.`,
+          content: `That's an interesting angle on "${node?.label}". What part of it should we clarify first: the meaning, the cause, or the next step?`,
           timestamp: new Date(),
         },
       ])
@@ -85,7 +73,7 @@ export function NodeChatPanel() {
   if (!node) return null
 
   const depthColor = getDepthColor(node.depth ?? 0)
-  const parentPath = parentNode ? `${parentNode.label} → ` : ''
+  const parentPath = parentNode ? `${parentNode.label} -> ` : ''
 
   return (
     <AnimatePresence>
@@ -97,7 +85,6 @@ export function NodeChatPanel() {
           transition={{ duration: 0.25, ease: 'easeOut' }}
           className="absolute right-0 top-0 bottom-0 w-80 bg-card border-l border-border flex flex-col z-30 shadow-panel animate-slide-in-right"
         >
-          {/* Header */}
           <div className="flex items-start justify-between p-4 border-b border-border">
             <div className="flex-1 min-w-0">
               <p className="text-[11px] text-muted-foreground truncate">
@@ -118,7 +105,6 @@ export function NodeChatPanel() {
             </button>
           </div>
 
-          {/* Tabs */}
           <div className="flex border-b border-border">
             {(['chat', 'notes'] as const).map((tab) => (
               <button
@@ -138,7 +124,6 @@ export function NodeChatPanel() {
             ))}
           </div>
 
-          {/* Chat tab */}
           {activeTab === 'chat' && (
             <>
               <div className="flex-1 overflow-y-auto p-3 space-y-3">
@@ -152,7 +137,7 @@ export function NodeChatPanel() {
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed">
                       Ask anything about <strong className="text-foreground">{node.label}</strong>.
-                      I'll help you go deeper, challenge assumptions, or expand the map.
+                      I&apos;ll help you clarify the meaning, challenge assumptions, or plan the next step.
                     </p>
                   </div>
                 )}
@@ -174,7 +159,7 @@ export function NodeChatPanel() {
                       {msg.extractedCount && msg.extractedCount > 0 && (
                         <button className="flex items-center gap-1 mt-2 text-[10px] opacity-70 hover:opacity-100 transition-opacity">
                           <Plus size={10} />
-                          {msg.extractedCount} idea{msg.extractedCount > 1 ? 's' : ''} found → Add to map
+                          {msg.extractedCount} idea{msg.extractedCount > 1 ? 's' : ''} found to add to map
                           <ChevronRight size={10} />
                         </button>
                       )}
@@ -197,11 +182,9 @@ export function NodeChatPanel() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input */}
               <div className="p-3 border-t border-border">
                 <div className="flex items-end gap-2 bg-secondary rounded-xl px-3 py-2">
                   <textarea
-                    ref={inputRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => {
@@ -229,7 +212,6 @@ export function NodeChatPanel() {
             </>
           )}
 
-          {/* Notes tab */}
           {activeTab === 'notes' && (
             <div className="flex-1 flex flex-col p-3 gap-2">
               <div className="flex items-center justify-between">

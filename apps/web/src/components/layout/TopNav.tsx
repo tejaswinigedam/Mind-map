@@ -24,7 +24,7 @@ export function TopNav() {
           <div className="w-6 h-6 rounded-md bg-primary/20 flex items-center justify-center">
             <Map size={13} className="text-primary" />
           </div>
-          <span className="text-xs font-bold text-foreground tracking-tight">MindMap AI</span>
+          <span className="text-xs font-bold text-foreground tracking-tight">MindMap</span>
         </div>
         <div className="w-px h-4 bg-border" />
         {isEditingTitle ? (

@@ -1,7 +1,7 @@
 import { memo, useState } from 'react'
 import { Handle, Position, type NodeProps } from 'reactflow'
 import { motion } from 'framer-motion'
-import { MessageSquare, FileText, Brain, Search, Sparkles, PlusCircle } from 'lucide-react'
+import { MessageSquare, FileText, Sparkles, PlusCircle } from 'lucide-react'
 import { getDepthColor, useMindMapStore } from '@/stores/mindMapStore'
 import { useUIStore } from '@/stores/uiStore'
 import { useAgentStore } from '@/stores/agentStore'
@@ -9,12 +9,6 @@ import { getSocket } from '@/lib/socket'
 import type { MindMapNode } from '@mind-map/shared-types'
 
 type CustomNodeData = MindMapNode & { isGhost?: boolean }
-
-const AGENT_ICONS: Record<string, React.ReactNode> = {
-  BrainstormAgent: <Brain size={10} />,
-  ResearchAgent: <Search size={10} />,
-  OnboardingAgent: <Sparkles size={10} />,
-}
 
 export const CustomNode = memo(({ data, selected }: NodeProps) => {
   const d = data as CustomNodeData
@@ -29,7 +23,6 @@ export const CustomNode = memo(({ data, selected }: NodeProps) => {
   const edges = useMindMapStore((s) => s.edges)
 
   const depthColor = d.color ?? getDepthColor(d.depth ?? 0)
-  const isAI = d.createdBy !== 'human'
   const isGhost = d.isGhost ?? false
   const hasNote = Boolean(d.noteContent)
 
@@ -53,7 +46,7 @@ export const CustomNode = memo(({ data, selected }: NodeProps) => {
       console.warn('Socket not connected, expansion may fail')
     }
 
-    setAgentThinking({ agent: 'BrainstormAgent', message: `Expanding "${d.label}"...` })
+    setAgentThinking({ agent: 'BrainstormAgent', message: `Expanding "${d.label}"...`, elapsedMs: 0 })
     
     socket.emit('agent:request', {
       intent: 'dive_deeper',
@@ -104,17 +97,6 @@ export const CustomNode = memo(({ data, selected }: NodeProps) => {
               backgroundSize: '200% 100%',
             }}
           />
-        </div>
-      )}
-
-      {/* Agent badge */}
-      {isAI && !isGhost && (
-        <div
-          className="absolute -top-2 -right-2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-medium text-white z-10"
-          style={{ backgroundColor: depthColor }}
-        >
-          {AGENT_ICONS[d.createdBy] ?? <Sparkles size={8} />}
-          <span>AI</span>
         </div>
       )}
 

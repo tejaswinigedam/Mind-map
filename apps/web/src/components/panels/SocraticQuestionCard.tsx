@@ -41,7 +41,7 @@ export function SocraticQuestionCard() {
                 <HelpCircle size={14} className="text-amber-400" />
               </div>
               <div className="flex-1">
-                <p className="text-[10px] font-medium text-amber-400 uppercase tracking-wider">AI Challenge</p>
+                <p className="text-[10px] font-medium text-amber-400 uppercase tracking-wider">Clarifying question</p>
               </div>
               <button
                 onClick={handleDismiss}

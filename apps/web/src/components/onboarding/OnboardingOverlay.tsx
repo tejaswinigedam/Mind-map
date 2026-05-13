@@ -129,13 +129,13 @@ export function OnboardingOverlay({ sessionId, mindMapId }: OnboardingOverlayPro
                 <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
                   <Sparkles size={16} className="text-primary" />
                 </div>
-                <span className="text-sm font-medium text-primary">MindMap AI</span>
+                <span className="text-sm font-medium text-primary">MindMap</span>
               </div>
               <h1 className="text-2xl font-bold text-foreground mb-2">
                 What are you exploring today?
               </h1>
               <p className="text-muted-foreground text-sm">
-                Type a topic, question, or idea — the AI will build your first map
+                Type a topic, question, or idea - the app will build your first map
               </p>
             </div>
 
@@ -298,8 +298,7 @@ function buildMapFromData(
 
     const subNodes = (branch.subNodes ?? []).slice(0, 4)
     subNodes.forEach((sub, j) => {
-      const subLabel = typeof sub === 'string' ? sub : sub.label
-      const subDetails = typeof sub === 'string' ? [] : (sub.details ?? [])
+      const subLabel = sub
 
       const subAngle = angle + ((j - (subNodes.length - 1) / 2) * 0.4)
       const subId = crypto.randomUUID()
@@ -331,44 +330,6 @@ function buildMapFromData(
         createdBy: 'OnboardingAgent',
         metadata: {},
         createdAt: now,
-        updatedAt: now,
-      })
-
-      // Add 3rd level details
-      subDetails.slice(0, 3).forEach((detailLabel: string, k: number) => {
-        const detailAngle = subAngle + ((k - (subDetails.length - 1) / 2) * 0.3)
-        const detailId = crypto.randomUUID()
-        const R3 = 140
-        nodes.push({
-          id: detailId,
-          mindMapId: 'demo-map',
-          parentId: subId,
-          label: detailLabel,
-          content: null,
-          nodeType: 'fact',
-          positionX: cx + Math.cos(subAngle) * R2 + Math.cos(detailAngle) * R3,
-          positionY: cy + Math.sin(subAngle) * R2 + Math.sin(detailAngle) * R3,
-          depth: 3,
-          color: null,
-          noteContent: null,
-          createdBy: 'OnboardingAgent',
-          isDeleted: false,
-          metadata: {},
-          createdAt: now,
-          updatedAt: now,
-        })
-        edges.push({
-          id: crypto.randomUUID(),
-          mindMapId: 'demo-map',
-          sourceId: subId,
-          targetId: detailId,
-          label: null,
-          edgeType: 'child',
-          createdBy: 'OnboardingAgent',
-          metadata: {},
-          createdAt: now,
-          updatedAt: now,
-        })
       })
     })
   })
@@ -490,7 +451,6 @@ function generateSeedMap(topic: string): { nodes: MindMapNode[]; edges: MindMapE
     // Add up to 4 sub-nodes per branch
     const subLabels = getSubLabels(label)
     const R2 = 200
-    const R3 = 140
     subLabels.forEach((subLabel, j) => {
       const subAngle = angle + ((j - (subLabels.length - 1) / 2) * 0.4)
       const subId = crypto.randomUUID()
@@ -511,55 +471,6 @@ function generateSeedMap(topic: string): { nodes: MindMapNode[]; edges: MindMapE
         metadata: {},
         createdAt: now,
         updatedAt: now,
-      })
-      edges.push({
-        id: crypto.randomUUID(),
-        mindMapId: 'demo-map',
-        sourceId: childId,
-        targetId: subId,
-        label: null,
-        edgeType: 'child',
-        createdBy: 'OnboardingAgent',
-        metadata: {},
-        createdAt: now,
-        updatedAt: now,
-      })
-
-      // Add 3rd level: Details for each sub-node
-      const details = ['Specific detail', 'Deep dive']
-      details.forEach((detailLabel, k) => {
-        const detailAngle = subAngle + ((k - 0.5) * 0.3)
-        const detailId = crypto.randomUUID()
-        nodes.push({
-          id: detailId,
-          mindMapId: 'demo-map',
-          parentId: subId,
-          label: `${detailLabel}`,
-          content: null,
-          nodeType: 'fact',
-          positionX: Math.cos(angle) * R + Math.cos(subAngle) * R2 + Math.cos(detailAngle) * R3,
-          positionY: Math.sin(angle) * R + Math.sin(subAngle) * R2 + Math.sin(detailAngle) * R3,
-          depth: 3,
-          color: null,
-          noteContent: null,
-          createdBy: 'OnboardingAgent',
-          isDeleted: false,
-          metadata: {},
-          createdAt: now,
-          updatedAt: now,
-        })
-        edges.push({
-          id: crypto.randomUUID(),
-          mindMapId: 'demo-map',
-          sourceId: subId,
-          targetId: detailId,
-          label: null,
-          edgeType: 'child',
-          createdBy: 'OnboardingAgent',
-          metadata: {},
-          createdAt: now,
-          updatedAt: now,
-        })
       })
     })
   })

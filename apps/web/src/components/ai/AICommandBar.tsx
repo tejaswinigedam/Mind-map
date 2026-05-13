@@ -14,7 +14,7 @@ const SLASH_COMMANDS = [
   { cmd: '/summarize', intent: 'summarize', desc: 'Summarize selected branch as text' },
   { cmd: '/critique', intent: 'critique', desc: 'Find gaps, contradictions, and redundancies' },
   { cmd: '/challenge', intent: 'challenge', desc: 'Get a Socratic question to challenge assumptions' },
-  { cmd: '/undo-all-ai', intent: 'brainstorm', desc: 'Revert all AI-accepted nodes in this session' },
+  { cmd: '/undo-all', intent: 'brainstorm', desc: 'Revert all accepted nodes in this session' },
 ] as const
 
 type Intent = 'brainstorm' | 'research' | 'dive_deeper' | 'structure' | 'summarize' | 'critique' | 'challenge' | 'onboard'
@@ -140,7 +140,7 @@ export function AICommandBar() {
             onKeyDown={handleKeyDown}
             placeholder={
               selectedNode
-                ? `Ask AI about "${selectedNode.label}" or type /command`
+                ? `Ask about "${selectedNode.label}" or type /command`
                 : 'Type a question or /command...'
             }
             className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
